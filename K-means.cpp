@@ -1,6 +1,3 @@
-// K-means.cpp : Defines the entry point for the console application.
-//
-
 #include "stdafx.h"
 #include <iostream>
 #include <omp.h>
@@ -13,9 +10,9 @@
 #include <ctime>
 using namespace std;
 #define NUM_THREADS 4
-#define SIZE 10000
-#define K 5000
-#define ITERATION 9
+#define SIZE 2000
+#define K 2
+#define ITERATION 4
  
 struct DataPoint {
     float  value;
@@ -27,8 +24,6 @@ struct Centeroid {
     float value;
 };
  
- 
-///ali whoooooooooooo
 float getDistance(float x1 , float x2) {
     return abs(x1 - x2);
 }
@@ -47,9 +42,8 @@ void minimumDistance(vector<Centeroid> *cent, DataPoint* dp) {
             index = i;
         }
     }
-       
+    #pragma omp critical
     cent->at(index).datap.push_back(*dp);
-    //cout << "Datapoint " << *dp << " is closest to Centroid: " << index << endl;
  
 }
  
@@ -59,16 +53,16 @@ void newMeans (vector<Centeroid>* cent){
     for(int i=0; i<cent->size(); i++){
         float sum=0;
         centSize = cent->at(i).datap.size();
- 
+        cout << "Centroid :" << i<< " equals"<<centSize <<endl;
         for(int j=0; j<centSize; j++){
             sum+=cent->at(i).datap.at(j).value;
         }
         if (centSize == 0){
-			continue;
+            continue;
         }
        
         avg = sum/centSize;
-        
+       
        
         cent->at(i).value = avg;
         cout << "centroid :" << i << " average "<< avg<<endl;
@@ -84,13 +78,15 @@ void main()
     srand((signed)time(0));
  
     // initialize array of data by random values.
+ 
     for(int i=0; i<SIZE; i++){
         DataPoint dp;
-       // dp.value=float((rand()%100)+1);
+        //dp.value=float((rand()%10000)+1);
         dp.value = static_cast <float> (rand()) / static_cast <float> (RAND_MAX) * 1000;
         arrDataItems.push_back(dp);
-        cout << "DataItem: "<<i <<" equals    "<< arrDataItems.at(i).value <<endl;
+        cout << "DataItem: "<<i <<" :equals    "<< arrDataItems.at(i).value <<endl;
     }
+ 
     // choose randomly the initial centroids.
     for(int j=0; j<K; j++){
         Centeroid centr;
@@ -100,36 +96,45 @@ void main()
     }
    
     //SEQUENTIAL CODE
-    /*for(int i=0; i<ITERATION; i++){
+/*  for(int i=0; i<ITERATION; i++){
  
         for(int k=0; k<arrDataItems.size(); k++){
+ 
             minimumDistance(&kCentroids, &arrDataItems.at(k));
         }
         newMeans(&kCentroids);
-    }*/
+ 
+        for(int j=0 ; j < K ; j++){
+            kCentroids.at(j).datap.clear();
+        }
+    }
+    */
    
-    for (int i = 0; i < ITERATION; i++) {
+     for (int i = 0; i < ITERATION; i++) {
                
-        printf(" outerLoop:%d\n", i);
-#pragma omp parallel num_threads(NUM_THREADS)
+        #pragma omp parallel num_threads(NUM_THREADS)
         {
             #pragma omp for schedule(static)
             for(int j = 0 ; j < SIZE ; j++){
                 //printf(" thread num inner:%d\n", omp_get_thread_num());
+                //#pragma omp critical
                 minimumDistance(&kCentroids, &arrDataItems.at(j));
-           
+               
+ 
             }
+ 
         }
         newMeans(&kCentroids);
+ 
+        for(int j=0 ; j < K ; j++){
+            kCentroids.at(j).datap.clear();
+        }
+       
     }
-   
-      
-   
-	t2=clock();
-	float diff ((float)t2-(float)t1);
+   t2=clock();
+   float diff ((float)t2-(float)t1);
     float seconds = diff / CLOCKS_PER_SEC;
     cout<<"Execution Time equals "<<seconds<<endl;
-    omp_get_wtime();
     system("pause");
    
  
